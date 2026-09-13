@@ -1,8 +1,9 @@
 """
 portpick.py  --  the app never fails to start because a port is taken.
 
-Copied verbatim from KEYRING_TERMUX/portpick.py (13.9.2026, itself from MAHA_TRANSCRIBE_TERMUX_TERMINAL);
-only the port, the marker and the app name changed. Fix it there and pull it here.
+Copied verbatim from KEYRING_TERMUX/portpick.py (13.9.2026, itself from MAHA_TRANSCRIBE_TERMUX_TERMINAL;
+again the same day for the live registry); only the port, the marker and the app name changed.
+Fix it there and pull it here.
 
 A transcriber that refuses to open because some other program happens to be
 on 8420 is a transcriber that is not there when it is wanted. Worse: the
@@ -29,6 +30,8 @@ per modules/quota-and-fallback.md's own house rule: read the file that
 already solves a problem before writing a new one.
 """
 
+import atexit
+import os
 import socket
 
 MAX_TRIES = 16          # 8860 through 8875, then the OS decides
@@ -116,7 +119,7 @@ def pick(host, preferred, tries=MAX_TRIES):
     quietly opens somewhere other than where he expects is its own
     confusion.
     """
-    preferred = int(preferred or 8860)
+    preferred = int(preferred or 8842)
 
     if is_free(host, preferred):
         return preferred, None
@@ -151,3 +154,87 @@ def pick(host, preferred, tries=MAX_TRIES):
         s.close()
     return chosen, (f"{why}, and {preferred}-{preferred + tries - 1} were "
                     f"all taken, so this one is on {chosen} instead.")
+
+
+# ---------------------------------------------------------------------------
+#  The live registry (modules/ports.md §3), written 13.9.2026.
+#
+#  A launcher (mamc) that wants to open an app's page cannot read the ports
+#  table in the manifest; it needs the port the app bound TODAY. So every app
+#  that picks a port writes one line, and removes it on the way out:
+#
+#      ~/.mantra/ports/<command>     the number, nothing else, 0600
+#
+#  Written right after pick(), removed at exit. Stale when the app was
+#  killed: the launcher checks that the port answers before trusting the
+#  file, so a stale line costs one refused connection and nothing else.
+#  Nothing in here raises: a registry that cannot be written is not worth
+#  failing a start over.
+# ---------------------------------------------------------------------------
+
+REGISTRY = os.path.join(os.path.expanduser("~"), ".mantra", "ports")
+
+
+def _entry(command):
+    command = str(command or "").strip()
+    if not command or "/" in command or command in (".", ".."):
+        return None
+    return os.path.join(REGISTRY, command)
+
+
+def announce(command, port):
+    """Write ~/.mantra/ports/<command> = port, and remove it at exit.
+
+    Returns the path written, or None when nothing was (no command, a port
+    out of range, a registry that cannot be written). Written beside its
+    name and renamed over it, so a reader never sees a half-written number.
+    """
+    path = _entry(command)
+    try:
+        port = int(port)
+    except (TypeError, ValueError):
+        return None
+    if path is None or not (1 <= port <= 65535):
+        return None
+    try:
+        os.makedirs(REGISTRY, mode=0o700, exist_ok=True)
+        tmp = path + ".new"
+        with open(tmp, "w") as f:
+            f.write("%d\n" % port)
+        os.chmod(tmp, 0o600)
+        os.replace(tmp, path)
+    except OSError:
+        return None
+    atexit.register(forget, command, port)
+    return path
+
+
+def forget(command, port=None):
+    """Remove the line, but only if it still says OUR port: a second copy of
+    the app started after us owns the file now, and its line must stay."""
+    path = _entry(command)
+    if path is None:
+        return False
+    try:
+        if port is not None:
+            with open(path) as f:
+                if f.read().strip() != str(int(port)):
+                    return False
+        os.remove(path)
+        return True
+    except (OSError, ValueError):
+        return False
+
+
+def registered(command):
+    """The launcher's side: the number in ~/.mantra/ports/<command>, or None.
+    Whether that port ANSWERS is the caller's question, not this one's."""
+    path = _entry(command)
+    if path is None:
+        return None
+    try:
+        with open(path) as f:
+            port = int(f.read(16).strip())
+    except (OSError, ValueError):
+        return None
+    return port if 1 <= port <= 65535 else None

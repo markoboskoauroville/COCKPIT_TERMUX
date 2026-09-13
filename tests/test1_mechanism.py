@@ -114,4 +114,27 @@ print("the version")
 import version  # noqa: E402
 check("one whole number", isinstance(version.APP_VERSION, int) and version.APP_VERSION >= 1)
 t0 = time.time(); probe.cpu_sample(); check("a cpu sample costs milliseconds, not seconds", time.time() - t0 < 0.5)
+
+print("portpick's live registry (ports.md §3): announce writes, forget removes, registered reads")
+import portpick  # noqa: E402
+import tempfile as _tf
+_reg_saved = portpick.REGISTRY
+_reg = _tf.mkdtemp(prefix="ports-")
+portpick.REGISTRY = _reg
+try:
+    path = portpick.announce("cockpit", 8850)
+    check("announce writes ~/.mantra/ports/<command>", path == os.path.join(_reg, "cockpit") and open(path).read().strip() == "8850")
+    check("the file is 0600", oct(os.stat(path).st_mode & 0o777) == "0o600")
+    check("registered reads it back", portpick.registered("cockpit") == 8850)
+    check("forget with another copy's port leaves it", portpick.forget("cockpit", 8851) is False and os.path.exists(path))
+    check("forget with our port removes it", portpick.forget("cockpit", 8850) is True and not os.path.exists(path))
+    check("registered of nothing is None", portpick.registered("cockpit") is None)
+    check("a bad port is not announced", portpick.announce("cockpit", 0) is None and portpick.announce("cockpit", "x") is None)
+    check("a command with a slash is refused", portpick.announce("../x", 8850) is None)
+    portpick.REGISTRY = os.path.join(_reg, "a-file"); open(portpick.REGISTRY, "w").write("x")
+    check("a registry that cannot be written does not raise", portpick.announce("cockpit", 8850) is None)
+finally:
+    portpick.REGISTRY = _reg_saved
+    import shutil as _sh; _sh.rmtree(_reg, ignore_errors=True)
+
 finish("test1_mechanism")

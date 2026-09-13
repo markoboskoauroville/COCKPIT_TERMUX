@@ -351,6 +351,7 @@ if __name__ == "__main__":
         except ValueError:
             print("ignoring invalid port argument %r, using %d" % (sys.argv[1], DEFAULT_PORT))
     LIVE_PORT, note = portpick.pick("127.0.0.1", requested)
+    portpick.announce("cockpit", LIVE_PORT)      # ~/.mantra/ports, for the launcher (ports.md §3)
     # serve at once: the first tick reads Termux:API and pm, which take seconds, and a server
     # that opens its page ten seconds late looks broken on the one screen that matters
     sampler.start()
