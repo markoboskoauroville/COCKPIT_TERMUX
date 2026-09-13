@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Cockpit</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<style>
+  :root {
+    /* AGY UI tokens, the same as every page here (keyring.html, maha_transcribe.html) */
+    --bg: #0b0d10; --surface: #0d1117; --surface-2: #141a21; --line: #23303d;
+    --amber: #f59e0b; --amber-hi: #fbbf24; --amber-lo: #b45309;
+    --prose: #f2ddb4; --dim: #8a7a5c; --red: #ef4444; --green: #22c55e;
+    --mono: ui-monospace, "JetBrains Mono", "Cascadia Mono", "SF Mono", Menlo, Consolas, monospace;
+  }
+  *:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--prose); font-family: var(--mono); min-height: 100vh; }
+  body { display: flex; justify-content: center; align-items: flex-start; padding: calc(12px + env(safe-area-inset-top)) 8px calc(14px + env(safe-area-inset-bottom)); }
+  .unit { width: 100%; max-width: 720px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+  header { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; }
+  h1 { font-size: 18px; letter-spacing: 0.12em; margin: 0; font-weight: 700; }
+  h1 span { color: var(--amber); }
+  .tag { font-size: 11px; color: var(--dim); letter-spacing: 0.06em; text-align: right; }
+  h2 { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); margin: 14px 0 6px; font-weight: 700; display: flex; justify-content: space-between; }
+  h2 small { font-weight: 400; text-transform: none; letter-spacing: 0; }
+  /* nothing appears, nothing disappears: dimmed things keep their place */
+  .off { opacity: 0.45; pointer-events: none; }
+  .row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 6px; }
+  .row > * { min-width: 0; }
+  button { background: var(--surface-2); border: 1px solid var(--line); color: var(--prose); font-family: var(--mono); font-size: 12px; letter-spacing: 0.04em; padding: 11px 14px; border-radius: 999px; cursor: pointer; }
+  button:hover { border-color: var(--amber); }
+  button.act { background: var(--amber); border-color: var(--amber); color: var(--bg); font-weight: 700; }
+  button.danger:hover { border-color: var(--red); color: var(--red); }
+  button.small { padding: 7px 10px; font-size: 11px; }
+  input[type=text] { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; color: var(--prose); font-family: var(--mono); font-size: 12px; padding: 10px; flex: 1 1 120px; }
+  .status { font-size: 12px; color: var(--dim); min-height: 34px; line-height: 1.5; margin: 4px 0 6px; white-space: pre-wrap; }
+  .status.err { color: var(--red); }
+  .status.ok { color: var(--green); }
+  /* the dials: a number, a bar, a caption. Same shape everywhere, colour is the state */
+  .dials { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+  .dial { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 10px; min-height: 92px; }
+  .dial .n { font-size: 28px; font-weight: 700; line-height: 1; color: var(--prose); }
+  .dial .n small { font-size: 13px; color: var(--dim); font-weight: 400; }
+  .dial .cap { font-size: 11px; color: var(--dim); margin-top: 6px; overflow-wrap: anywhere; }
+  .bar { height: 6px; background: var(--line); border-radius: 3px; margin-top: 8px; overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0; background: var(--amber); border-radius: 3px; transition: width 0.4s; }
+  .bar i.hot { background: var(--red); }
+  .cores { display: flex; gap: 3px; margin-top: 8px; height: 18px; align-items: flex-end; }
+  .cores i { flex: 1; background: var(--line); border-radius: 2px; min-height: 2px; }
+  .cores i.on { background: var(--amber); }
+  .cores i.hot { background: var(--red); }
+  .age { font-size: 10px; color: var(--dim); }
+  /* the list: one row per process */
+  .proc { display: grid; grid-template-columns: 64px 1fr auto; gap: 8px; align-items: center; padding: 8px 6px; border-top: 1px solid var(--line); }
+  .proc:first-child { border-top: none; }
+  .proc .mb { font-size: 13px; font-weight: 700; text-align: right; }
+  .proc .mb small { color: var(--dim); font-weight: 400; font-size: 10px; }
+  .proc .name { font-size: 12px; overflow-wrap: anywhere; }
+  .proc .name small { color: var(--dim); }
+  .log { font-size: 11px; color: var(--dim); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 180px; overflow: auto; background: var(--surface-2); border-radius: 10px; padding: 8px; }
+  .kv { font-size: 12px; color: var(--dim); line-height: 1.7; }
+  .kv b { color: var(--prose); font-weight: 400; }
+</style>
+</head>
+<body>
+<div class="unit">
+  <header>
+    <h1><span>COCK</span>PIT</h1>
+    <div class="tag">v{{VERSION}} · <span id="hdrDevice">…</span><br>127.0.0.1 only · <span id="hdrAge">connecting</span></div>
+  </header>
+
+  <h2>1 · now <small id="uptime"></small></h2>
+  <div class="dials">
+    <div class="dial" id="dCpu"><div class="n"><span id="cpuN">–</span><small> % cpu</small></div><div class="cores" id="cores"></div><div class="cap" id="cpuCap">idle counters of every core</div></div>
+    <div class="dial" id="dFreq"><div class="n"><span id="freqN">–</span><small> GHz</small></div><div class="bar"><i id="freqBar"></i></div><div class="cap" id="freqCap">clusters</div></div>
+    <div class="dial" id="dRam"><div class="n"><span id="ramN">–</span><small> % ram</small></div><div class="bar"><i id="ramBar"></i></div><div class="cap" id="ramCap">used of total</div></div>
+    <div class="dial" id="dSwap"><div class="n"><span id="swapN">–</span><small> % swap</small></div><div class="bar"><i id="swapBar"></i></div><div class="cap" id="swapCap">swap</div></div>
+    <div class="dial" id="dBat"><div class="n"><span id="batN">–</span><small> % battery</small></div><div class="bar"><i id="batBar"></i></div><div class="cap" id="batCap">battery</div></div>
+    <div class="dial" id="dTherm"><div class="n"><span id="thermN">–</span><small> thermal</small></div><div class="bar"><i id="thermBar"></i></div><div class="cap" id="thermCap">needs the bridge</div></div>
+    <div class="dial" id="dDisk"><div class="n"><span id="diskN">–</span><small> % storage</small></div><div class="bar"><i id="diskBar"></i></div><div class="cap" id="diskCap">storage</div></div>
+    <div class="dial" id="dWifi"><div class="n"><span id="wifiN">–</span><small> dBm</small></div><div class="bar"><i id="wifiBar"></i></div><div class="cap" id="wifiCap">wifi</div></div>
+  </div>
+
+  <h2>2 · in memory <small id="procAge"></small></h2>
+  <div class="row">
+    <button id="refresh" class="small">refresh now</button>
+    <button id="killAll" class="small danger off">kill every background process</button>
+    <span class="kv" id="procNote">the bridge is down: only Termux's own processes can be seen</span>
+  </div>
+  <div id="procs"></div>
+  <div id="procStatus" class="status">nothing done yet</div>
+
+  <h2>3 · the bridge <small id="bridgeState">…</small></h2>
+  <div class="kv">Developer options → Wireless debugging → Pair device with pairing code. Type what that screen shows.</div>
+  <div class="row">
+    <input type="text" id="pairHost" placeholder="pairing host:port  e.g. 192.168.1.5:41234" aria-label="pairing host and port">
+    <input type="text" id="pairCode" placeholder="six-digit code" aria-label="pairing code" inputmode="numeric">
+    <button id="pairBtn">pair</button>
+  </div>
+  <div class="row">
+    <input type="text" id="connHost" placeholder="connect host:port  (the port on the Wireless debugging screen)" aria-label="connect host and port">
+    <button id="connBtn" class="act">connect</button>
+    <button id="discBtn" class="off">disconnect</button>
+  </div>
+  <div class="row">
+    <span class="kv" id="phantom">phantom-process limit: needs the bridge</span>
+    <button id="liftBtn" class="small off">lift the limit</button>
+  </div>
+  <div class="row">
+    <span class="kv">wake lock (keeps Termux awake with the screen off)</span>
+    <button id="wakeOn" class="small">hold</button>
+    <button id="wakeOff" class="small">release</button>
+  </div>
+  <div id="bridgeStatus" class="status">no bridge action yet</div>
+
+  <h2>4 · what happened</h2>
+  <div class="log" id="log">nothing yet</div>
+</div>
+
+<script>
+/* the page talks to its own server only, with the header a cross-site request cannot set */
+const H = { "X-Cockpit-Local": "1", "Content-Type": "application/json" };
+const $ = id => document.getElementById(id);
+let S = null, lastOk = 0;
+
+function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+function say(id, msg, cls) { const s = $(id); s.textContent = msg; s.className = "status" + (cls ? " " + cls : ""); }
+function ago(t, now) { if (!t) return "never"; const d = Math.max(0, now - t); return d < 3 ? "now" : d < 90 ? d + " s ago" : Math.round(d / 60) + " min ago"; }
+function dur(s) { if (s == null) return ""; const d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60); return (d ? d + "d " : "") + h + "h " + m + "m up"; }
+function bar(id, pct, hot) { const b = $(id); b.style.width = (pct == null ? 0 : Math.max(0, Math.min(100, pct))) + "%"; b.className = hot ? "hot" : ""; }
+function dial(id, on) { $(id).classList.toggle("off", !on); }
+
+async function api(path, body) {
+  const r = await fetch(path, body === undefined ? { headers: H } : { method: "POST", headers: H, body: JSON.stringify(body || {}) });
+  return r.json();
+}
+
+function render(s) {
+  const now = s.now;
+  $("hdrDevice").textContent = s.device ? `${s.device.brand} ${s.device.model} · Android ${s.device.android} · ${s.device.cores} cores` : "reading the phone";
+  $("hdrAge").textContent = "read " + ago(s.at.cpu, now);
+  $("uptime").textContent = dur(s.uptime_s);
+  // cpu
+  const cpu = s.cpu; dial("dCpu", !!cpu);
+  $("cpuN").textContent = cpu ? cpu.pct : "–";
+  const cores = $("cores");
+  if (cpu) {
+    if (cores.children.length !== cpu.per_core.length) cores.innerHTML = cpu.per_core.map(() => "<i></i>").join("");
+    cpu.per_core.forEach((p, i) => { const el = cores.children[i]; el.style.height = Math.max(8, p) + "%"; el.className = p >= 90 ? "hot" : p > 5 ? "on" : ""; });
+    $("cpuCap").textContent = (s.cpu_stat != null ? `bridge says ${s.cpu_stat} % · ` : "") + `${cpu.cores} cores, from their idle counters`;
+  }
+  // frequency
+  const f = s.freq || []; dial("dFreq", f.length > 0);
+  if (f.length) {
+    const top = f.reduce((a, b) => (b.cur_mhz > a.cur_mhz ? b : a));
+    $("freqN").textContent = (top.cur_mhz / 1000).toFixed(2);
+    bar("freqBar", top.pct);
+    $("freqCap").textContent = f.map(c => `${c.policy.replace("policy", "cluster ")}: ${(c.cur_mhz / 1000).toFixed(1)}/${(c.max_mhz / 1000).toFixed(1)} GHz`).join(" · ");
+  }
+  // ram, swap
+  const m = s.memory; dial("dRam", !!m); dial("dSwap", !!m);
+  if (m) {
+    $("ramN").textContent = m.used_pct; bar("ramBar", m.used_pct, m.available_mb < 400);
+    $("ramCap").textContent = `${(m.used_mb / 1024).toFixed(1)} of ${(m.total_mb / 1024).toFixed(1)} GB used · ${m.available_mb} MB available`;
+    $("swapN").textContent = m.swap_total_mb ? m.swap_pct : 0; bar("swapBar", m.swap_pct, m.swap_pct > 90);
+    $("swapCap").textContent = m.swap_total_mb ? `${(m.swap_used_mb / 1024).toFixed(1)} of ${(m.swap_total_mb / 1024).toFixed(1)} GB` : "no swap";
+  }
+  // battery
+  const b = s.battery; dial("dBat", !!b);
+  if (b) { $("batN").textContent = b.pct; bar("batBar", b.pct, b.pct != null && b.pct < 15); $("batCap").textContent = `${b.status || ""}${b.temp_c != null ? " · " + b.temp_c + " °C" : ""}${b.current_ma ? " · " + b.current_ma + " mA" : ""} · ${ago(s.at.bridge_slow || s.at.api, now)}`; }
+  // thermal
+  const t = s.thermal; dial("dTherm", !!t);
+  if (t) { $("thermN").textContent = t.status_name; bar("thermBar", t.status * 100 / 6, t.status >= 3); $("thermCap").textContent = t.temps.slice(0, 3).map(x => `${x.name} ${x.c}°`).join(" · ") || "no sensors reported"; }
+  // storage
+  const d = s.storage; dial("dDisk", !!d);
+  if (d) { $("diskN").textContent = d.used_pct; bar("diskBar", d.used_pct, d.free_gb < 2); $("diskCap").textContent = `${d.free_gb} of ${d.total_gb} GB free`; }
+  // wifi
+  const w = s.wifi, known = !!(w && w.rssi != null && w.rssi > -120 && w.ssid && !w.ssid.startsWith("<unknown"));
+  dial("dWifi", known);
+  if (w) { $("wifiN").textContent = known ? w.rssi : "–"; bar("wifiBar", known ? Math.max(0, Math.min(100, (w.rssi + 100) * 2)) : 0, known && w.rssi < -80); $("wifiCap").textContent = known ? `${w.ssid} · ${w.ip} · ${w.link_mbps} Mbps` : "wifi unknown: Termux:API needs the Location permission to read it"; }
+  // processes
+  const up = !!s.bridge.paired;
+  $("killAll").classList.toggle("off", !up);
+  $("procAge").textContent = up ? "via the bridge, " + ago(s.at.bridge_procs, now) : "Termux's own, " + ago(s.at.quick, now);
+  let rows = [];
+  if (up && s.procs && s.procs.processes.length) {
+    $("procNote").textContent = `${s.procs.processes.length} processes in memory${s.procs.total_mb ? ", " + Math.round(s.procs.total_mb / 1024) + " GB of RAM in all" : ""}`;
+    rows = s.procs.processes.slice(0, 40).map(p => `<div class="proc"><div class="mb">${p.pss_mb}<small> MB</small></div><div class="name">${esc(p.name)}<br><small>pid ${p.pid}${p.note ? " · " + esc(p.note) : ""}</small></div><button class="small danger" data-act="stop" data-pkg="${esc(p.name.split(":")[0])}">stop</button></div>`);
+  } else {
+    $("procNote").textContent = up ? "the bridge is up; reading dumpsys meminfo…" : `the bridge is down: only Termux's own ${s.own.length} processes can be seen (${s.packages.length} apps installed)`;
+    rows = (s.own || []).map(p => `<div class="proc"><div class="mb">${p.rss_mb}<small> MB</small></div><div class="name">${esc(p.name)}<br><small>pid ${p.pid} · ${esc(p.cmd)}</small></div><button class="small off">stop</button></div>`);
+  }
+  $("procs").innerHTML = rows.join("") || '<div class="kv">nothing to show</div>';
+  // bridge
+  $("bridgeState").textContent = s.bridge.note || "";
+  $("discBtn").classList.toggle("off", !up);
+  $("liftBtn").classList.toggle("off", !up || (s.phantom && s.phantom.lifted));
+  $("phantom").textContent = s.phantom ? `phantom-process limit: ${s.phantom.lifted ? "lifted" : "IN FORCE (32 orphans and Android kills)"} · monitor=${s.phantom.monitor} max=${s.phantom.max}` : "phantom-process limit: " + (up ? "reading…" : "needs the bridge");
+}
+
+async function poll() {
+  try {
+    const j = await api("/api/status");
+    if (j.ok) { S = j.status; lastOk = Date.now(); render(S); }
+  } catch (e) {
+    $("hdrAge").textContent = "server not answering";
+  }
+}
+
+async function act(path, body, statusId) {
+  say(statusId, "working…");
+  try {
+    const j = await api(path, body);
+    say(statusId, j.said || j.error || (j.ok ? "done" : "failed"), j.ok ? "ok" : "err");
+  } catch (e) { say(statusId, "the server did not answer", "err"); }
+  poll();
+}
+
+$("procs").addEventListener("click", e => {
+  const b = e.target.closest("button[data-act]"); if (!b) return;
+  if (b.dataset.act === "stop") act("/api/stop", { package: b.dataset.pkg }, "procStatus");
+});
+$("refresh").onclick = () => act("/api/refresh", {}, "procStatus");
+$("killAll").onclick = () => { if (confirm("Stop every background process now?")) act("/api/kill-all", {}, "procStatus"); };
+$("pairBtn").onclick = () => act("/api/bridge/pair", { hostport: $("pairHost").value, code: $("pairCode").value }, "bridgeStatus");
+$("connBtn").onclick = () => act("/api/bridge/connect", { hostport: $("connHost").value }, "bridgeStatus");
+$("discBtn").onclick = () => act("/api/bridge/disconnect", {}, "bridgeStatus");
+$("liftBtn").onclick = () => act("/api/phantom/lift", {}, "bridgeStatus");
+$("wakeOn").onclick = () => act("/api/wake", { on: true }, "bridgeStatus");
+$("wakeOff").onclick = () => act("/api/wake", { on: false }, "bridgeStatus");
+
+async function loadLog() {
+  try { const j = await api("/api/log?n=40"); $("log").textContent = j.lines.length ? j.lines.map(l => `${l.t}  ${l.event}  ${Object.entries(l).filter(([k]) => k !== "t" && k !== "event").map(([k, v]) => k + "=" + v).join(" ")}`).reverse().join("\n") : "nothing yet"; } catch (e) {}
+}
+poll(); loadLog();
+setInterval(poll, 2000); setInterval(loadLog, 10000);
+</script>
+</body>
+</html>

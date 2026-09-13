@@ -1,0 +1,52 @@
+#!/data/data/com.termux/files/usr/bin/bash
+# cockpit  --  the one word for the phone's health page (Marko, 13.9.2026: "a Termux app displaying the
+# health status ... a Flask web page, my cockpit of my Android phone, where I can kill the apps that are
+# taking memory and resources for nothing").
+#
+#   cockpit                      the server and the page; the console has q / o / u / r
+#   cockpit update               pull the newest version from GitHub and exit
+#   cockpit install              put this command on the PATH ($PREFIX/bin and ~/.local/bin)
+#
+# The platform lives here and in install-termux.sh; app.py knows nothing about it. Absolute paths,
+# no cd (modules/termux-proot-working.md). Copied from KEYRING_TERMUX/keyring (13.9.2026).
+set -u
+SOURCE="${BASH_SOURCE[0]}"
+while [ -L "$SOURCE" ]; do
+  DIR="$(cd -P "$(dirname "$SOURCE")" >/dev/null 2>&1 && pwd)"
+  SOURCE="$(readlink "$SOURCE")"
+  [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
+done
+APP="$(cd -P "$(dirname "$SOURCE")" >/dev/null 2>&1 && pwd)"
+PY="$(command -v python3 || command -v python)"
+BIN="${PREFIX:-/data/data/com.termux/files/usr}/bin"
+if [ -t 1 ]; then AM="\033[38;5;214m"; DIM="\033[0;90m"; BAD="\033[1;31m"; OFF="\033[0m"; else AM=""; DIM=""; BAD=""; OFF=""; fi
+version() { sed -nE 's/^APP_VERSION *= *([0-9]+).*/\1/p' "$APP/version.py" 2>/dev/null; }
+
+case "${1:-run}" in
+  run|serve)
+    [ -n "$PY" ] || { printf "  ${BAD}no python3 on the PATH${OFF}: pkg install python\n"; exit 1; }
+    "$PY" -c "import flask" 2>/dev/null || { printf "  ${BAD}flask is missing${OFF}: pip install flask waitress\n"; exit 1; }
+    termux-wake-lock 2>/dev/null || true
+    exec "$PY" "$APP/app.py" "${@:2}"
+    ;;
+  update)
+    printf "\n  ${AM}cockpit update${OFF}  installed v$(version)\n"
+    [ -d "$APP/.git" ] || { printf "  ${BAD}$APP is not a git clone${OFF}\n\n"; exit 1; }
+    git -C "$APP" fetch --quiet origin main || { printf "  ${BAD}could not reach GitHub${OFF}, nothing changed\n\n"; exit 1; }
+    if [ "$(git -C "$APP" rev-parse @)" = "$(git -C "$APP" rev-parse origin/main)" ]; then printf "  already the latest (v$(version)), nothing to do\n\n"; exit 0; fi
+    git -C "$APP" pull --ff-only origin main || { printf "  ${BAD}git pull failed${OFF}, nothing changed\n\n"; exit 1; }
+    printf "  ${AM}updated to v$(version)${OFF}; run  cockpit  again\n\n"
+    ;;
+  install)
+    for d in "$BIN" "$HOME/.local/bin"; do
+      mkdir -p "$d" 2>/dev/null || continue
+      # written beside its name and renamed over it, never truncated (a running copy keeps its file)
+      printf '#!/data/data/com.termux/files/usr/bin/bash\nexec bash "%s/cockpit" "$@"\n' "$APP" > "$d/cockpit.new" && chmod +x "$d/cockpit.new" && mv -f "$d/cockpit.new" "$d/cockpit" && printf "  ${AM}cockpit${OFF} -> $d/cockpit\n"
+    done
+    printf "  ${DIM}type  cockpit  anywhere to start it${OFF}\n"
+    ;;
+  -h|--help|help)
+    printf "  cockpit [run [port]|update|install]\n"; exit 0 ;;
+  *)
+    printf "  cockpit [run [port]|update|install]\n"; exit 2 ;;
+esac

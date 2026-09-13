@@ -1,0 +1,7 @@
+# the log is ~/.cockpit, outside this repository
+__pycache__/
+*.pyc
+gates/LAST_RUN.txt
+gates/BUDGETS.json.new
+.hypothesis/
+.mutmut-cache
