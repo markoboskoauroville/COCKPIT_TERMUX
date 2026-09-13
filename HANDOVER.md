@@ -41,6 +41,13 @@ with the Android companion app (COCKPIT_ANDROID, the status-bar number and the n
 - **Private repository**, as every new app here is until it is said to go public; the installer
   clones through `gh` and says so when the clone is refused.
 
+## Measured after the record (13.9.2026, later the same day)
+
+The app ran once under Termux's own python (3.14.6), outside the PRoot, through the installed
+`cockpit` command (a runit service started it; the PRoot's shell read it over HTTP): the banner,
+the page, `/health`, a CPU number (11 %), memory, battery from Termux:API, 105 packages from pm.
+So the readers are proven in the app domain, not only in the PRoot whose /proc is partly fake.
+
 ## What is left, in order
 
 1. **A real pairing on this phone** (Wireless debugging is a person's screen): the bridge was
