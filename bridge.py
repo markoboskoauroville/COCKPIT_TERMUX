@@ -238,12 +238,28 @@ def disconnect():
     return rc == 0, out.strip()
 
 
-def shell(cmd, timeout=ADB_TIMEOUT, serial=None):
+_serial_cache = {"at": 0.0, "serial": None}
+
+
+def live_serial(max_age=5.0):
+    """The first live device's serial, remembered for a few seconds: every shell() used to ask
+    `adb devices` first, two process starts per command, and G6's soak timed out on it."""
+    import time
+    if time.time() - _serial_cache["at"] > max_age:
+        st = state()
+        _serial_cache.update(at=time.time(), serial=st.get("serial") if st.get("paired") else None)
+    return _serial_cache["serial"]
+
+
+def shell(cmd, timeout=None, serial=None):
     """(rc, text) of one command in the phone's shell. None serial: the first live device."""
-    serial = serial or (state().get("serial") if state().get("paired") else None)
+    serial = serial or live_serial()
     if not serial:
         return 125, "the bridge is not connected"
-    return run(["-s", serial, "shell", cmd], timeout=timeout)
+    rc, out = run(["-s", serial, "shell", cmd], timeout=timeout or ADB_TIMEOUT)
+    if rc != 0 and "not found" in out or rc == 124:
+        _serial_cache["at"] = 0.0                            # ask again next time: the device may have gone
+    return rc, out
 
 
 def processes():

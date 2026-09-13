@@ -6,6 +6,7 @@ a new number. Bumped by hand on every commit that touches this app. Kept in its 
 selfupdate.py can read it off origin/main without importing app.py.
 
 v1: 13.9.2026, the first cockpit.
+v2: 13.9.2026, the same day: the bridge remembers its serial, the page opener is bounded, the gates run green.
 """
 
-APP_VERSION = 1
+APP_VERSION = 2

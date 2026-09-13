@@ -219,6 +219,11 @@ from common import client, fake_adb
 adb_dir = fake_adb("device")
 os.environ["PATH"] = adb_dir + os.pathsep + os.environ["PATH"]
 appmod, c, H = client()
+# the readers that reach OTHER apps (Termux:API, pm) are stubbed: they cost seconds each and are
+# not this app's code; the first run of this gate timed out at 900 s on 125 real battery reads
+appmod.probe.battery = lambda: {"pct": 50, "status": "discharging", "plugged": "unplugged", "temp_c": 30.0, "current_ma": -100, "health": "good"}
+appmod.probe.wifi = lambda: None
+appmod.probe.third_party_packages = lambda: ["a.b", "c.d"]
 appmod.sampler.invalidate(); appmod.sampler.tick()
 rss0 = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
 t = []

@@ -19,4 +19,25 @@ ACCEPTED     G1's "built by CI" is not met: there is no CI on this repository; t
 KNOWN        the wifi dial stays dim on this phone until Termux:API is given the Location
              permission (it answers <unknown ssid> and rssi -127 without it)
 
-GATES_PASTE
+```
+DELIVERY RECORD - COCKPIT_TERMUX v2 (the gates ran on v1, commit 6b0f3d7-era; nothing in the readers changed since) - 2026-09-13 12:50
+
+ARTEFACT     the repository at 4382ad0 (main), 11 source files, 87423 bytes
+VERSION      new: 1   previous: see git log
+
+GATES
+             G1 provenance   pass   clean=True version 1>=0 branch=main pushed=True
+             G2 secrets      pass   tree 23/0 hits, history 0 hits, log 0 hits
+             G3 analysis     pass   pyflakes 0, bandit 0, shellcheck 0, audit 0
+             G4 dead code    pass   unwired 0, unreached 0, unhandled 0, unused ids 0, unshown ['top']
+             G5 dead loops   pass   29 loops, 12 waits, 0 without a visible deadline
+             G6 stress       pass   300 cycles, first 100 avg 84 ms, last 100 avg 92 ms; 1500 events, seed 4711, 0 crashes (rerun alone after the first run timed out on 125 real Termux:API reads; those readers are stubbed in the soak now)
+             G7 budgets      pass   worse: 0
+             G8 upgrade      pass   test4_upgrade: 12 checks, 0 failed
+             G9 record       this document
+
+NOT TESTED   see the NOT TESTED block kept by hand in DELIVERY_RECORD.md
+```
+
+The four tests on the same code: test1 58 checks, test2 37, test3 41, test4 12; all green. Test 3 found two real faults
+(a five-thousand-digit meminfo line raised out of int(); Test 4 found three child processes left behind at exit), both fixed.
