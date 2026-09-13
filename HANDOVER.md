@@ -38,8 +38,8 @@ with the Android companion app (COCKPIT_ANDROID, the status-bar number and the n
 - **Bounded digit runs in the meminfo parser**: a five-thousand-digit line raised ValueError out
   of Python's int() limit (Test 3, MALFORMED).
 - **Port 8860**, the first free hundred-block above the keyring's 8842 (ports.md).
-- **Private repository**, as every new app here is until it is said to go public; the installer
-  clones through `gh` and says so when the clone is refused.
+- **Public repository** since 13.9.2026 (Marko: the install line must work without a login); the
+  installer clones with plain git, or through `gh` when it is logged in.
 
 ## Measured after the record (13.9.2026, later the same day)
 

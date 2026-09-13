@@ -14,8 +14,8 @@ other tasks a hacker should have in his phone."*
 curl -fsSL https://raw.githubusercontent.com/markoboskoauroville/COCKPIT_TERMUX/main/install-termux.sh | bash
 ```
 
-The repository is private until it is said to go public, so the phone needs `gh auth login` once;
-the installer then clones through `gh`. Optional: `pkg install android-tools` for the bridge,
+The repository is public (Marko, 13.9.2026), so the line above needs no login: the installer clones
+with plain git, or through `gh` when that is logged in. Optional: `pkg install android-tools` for the bridge,
 `pkg install termux-api` plus the Termux:API app for battery and wifi.
 
 ## What the page shows

@@ -1,7 +1,6 @@
 #!/data/data/com.termux/files/usr/bin/bash
-# Install the Cockpit in Termux. One command, on a phone where `gh auth login` has been done
-# (the repository is private until Marko says it can go public; gh carries the credential, the
-# script carries none):
+# Install the Cockpit in Termux. One command, no login: the repository is public (Marko, 13.9.2026).
+# The script carries no credential; when gh is logged in it clones through gh, else with plain git:
 #   curl -fsSL https://raw.githubusercontent.com/markoboskoauroville/COCKPIT_TERMUX/main/install-termux.sh | bash
 # On a public repository the same line works with plain git. No venv (Termux's pip installs straight
 # into site-packages, modules/termux-app.md §3).
