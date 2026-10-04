@@ -5,8 +5,10 @@ Marko, 13.9.2026: *"a Termux app displaying the health status … a Flask web pa
 Android phone, where I can kill the apps that are taking memory and resources for nothing, and
 other tasks a hacker should have in his phone."*
 
-    cockpit                      the server on 127.0.0.1:8860 and the page; q quits it
-    cockpit update               pull the newest version and exit (the u key does it live)
+```
+cockpit                      the server on 127.0.0.1:8860 and the page; q quits it
+cockpit update               pull the newest version and exit (the u key does it live)
+```
 
 ## How to install
 
@@ -44,10 +46,12 @@ pairing survives. Without the bridge the page still shows everything the readers
 
 ## What this phone lets an app read (measured 13.9.2026, Nothing Phone (2a), Android 16)
 
-    DENIED     /proc/stat  /proc/loadavg  /proc/uptime  /proc/vmstat  /proc/pressure/*
-               anyone else's /proc/<pid>, /sys/class/thermal, /sys/class/power_supply
-    READABLE   /proc/meminfo, /proc/cpuinfo, /proc/self/*, /sys/devices/system/cpu/* (cpuidle,
-               cpufreq), pm list packages, getprop, Termux:API (battery, wifi; seconds per call)
+```
+DENIED     /proc/stat  /proc/loadavg  /proc/uptime  /proc/vmstat  /proc/pressure/*
+           anyone else's /proc/<pid>, /sys/class/thermal, /sys/class/power_supply
+READABLE   /proc/meminfo, /proc/cpuinfo, /proc/self/*, /sys/devices/system/cpu/* (cpuidle,
+           cpufreq), pm list packages, getprop, Termux:API (battery, wifi; seconds per call)
+```
 
 ## The shape
 
