@@ -1,3 +1,7 @@
+
+
+## From the former README (9.11.2026)
+
 # COCKPIT_TERMUX, the phone's health and the hand on it
 
 **One page on the phone that says what the phone is doing, and lets you stop what should not be.**
